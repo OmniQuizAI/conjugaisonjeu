@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le Jeu de la Moustache</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .bounce { animation: bounce 1s infinite; }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 p-4">
+
+    <div id="app" class="min-h-screen flex flex-col items-center">
+        <!-- Moustache Header -->
+        <div class="text-center mb-6">
+            <svg viewBox="0 0 200 60" class="w-32 h-10 mx-auto mb-1 fill-slate-800">
+                <path d="M100,20 C120,20 135,10 150,10 C175,10 195,30 195,40 C195,50 175,55 160,50 C145,45 140,35 130,35 C120,35 115,45 100,45 C85,45 80,35 70,35 C60,35 55,45 40,50 C25,55 5,50 5,40 C5,30 25,10 50,10 C65,10 80,20 100,20 Z" />
+            </svg>
+            <h1 class="text-xl font-black text-slate-900 uppercase tracking-widest">Le Jeu de la Moustache</h1>
+        </div>
+
+        <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-4">
+            <!-- Left Panel -->
+            <div class="lg:col-span-3 space-y-4">
+                <div class="bg-white p-5 rounded-3xl shadow-lg border border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 mb-3 uppercase tracking-tighter text-center">Choix du parcours</p>
+                    <div id="group-buttons" class="grid grid-cols-1 gap-2 mb-6">
+                        <!-- Group buttons injected here -->
+                    </div>
+                    <div id="player-stats" class="space-y-2">
+                        <!-- Player stats injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Central Board -->
+            <div class="lg:col-span-6 bg-white p-4 rounded-3xl shadow-xl border border-slate-100">
+                <div id="board" class="flex flex-wrap justify-center content-start gap-1 h-full max-h-[650px] overflow-y-auto pb-4">
+                    <!-- Tiles injected here -->
+                </div>
+            </div>
+
+            <!-- Right Panel: Dice -->
+            <div class="lg:col-span-3 flex flex-col gap-4">
+                <div class="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 flex flex-col items-center justify-center flex-1">
+                    <p class="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">Zone de lancer</p>
+                    <button id="dice-btn" class="w-32 h-32 rounded-[2rem] flex flex-col items-center justify-center text-6xl font-black transition-all shadow-2xl border-4 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white border-indigo-300 hover:scale-105 active:scale-95">
+                        <i data-lucide="dice-5" class="w-12 h-12"></i>
+                    </button>
+                    <div class="mt-8 text-center">
+                        <p id="turn-indicator" class="text-sm font-black uppercase tracking-widest text-indigo-600 animate-pulse">
+                            TOUR DE JOUEUR 1
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-amber-100 p-4 rounded-2xl border-2 border-amber-200">
+                    <h3 class="text-[10px] font-black text-amber-700 mb-2 uppercase">Guide rapide</h3>
+                    <p class="text-[9px] text-amber-800 leading-tight">Changer d'option réinitialise le jeu et change les emplacements des flèches.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-container" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <!-- Challenge/Winner Content injected here -->
+    </div>
+
+    <div id="special-msg" class="hidden fixed top-10 left-1/2 transform -translate-x-1/2 z-[60] animate-bounce">
+        <div id="special-msg-content" class="bg-indigo-600 text-white px-8 py-3 rounded-full font-black shadow-2xl border-4 border-white">
+            Message
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        const BOARD_SIZE = 28;
+        const mapsConfig = {
+            group1: { 5: { v: 3 }, 10: { v: -4 }, 15: { v: 2 }, 20: { v: -6 }, 25: { v: -10 } },
+            group2: { 4: { v: 5 }, 9: { v: -3 }, 14: { v: -5 }, 19: { v: 4 }, 24: { v: -12 } },
+            group3: { 6: { v: -4 }, 12: { v: 6 }, 18: { v: -8 }, 22: { v: -5 }, 26: { v: -15 } },
+            all: { 5: { v: 3 }, 8: { v: -2 }, 11: { v: 4 }, 16: { v: -3 }, 19: { v: -5 }, 22: { v: -8 } }
+        };
+
+        const verbsData = {
+            group1: ['Manger', 'Chanter', 'Parler', 'Aimer', 'Jouer', 'Tomber', 'Sauter', 'Cuisiner', 'Marcher', 'Regarder', 'Écouter', 'Donner', 'Chercher', 'Travailler'],
+            group2: ['Finir', 'Choisir', 'Grandir', 'Remplir', 'Rougir', 'Obéir', 'Réussir', 'Bâtir', 'Réfléchir', 'Punir'],
+            group3: ['Être', 'Avoir', 'Aller', 'Faire', 'Prendre', 'Venir', 'Dire', 'Pouvoir', 'Vouloir', 'Voir', 'Savoir', 'Partir'],
+        };
+
+        const conjugationTable = {
+            'Manger': { je: 'mange', tu: 'manges', il: 'mange', nous: 'mangeons', vous: 'mangez', ils: 'mangent' },
+            'Chanter': { je: 'chante', tu: 'chantes', il: 'chante', nous: 'chantons', vous: 'chantez', ils: 'chantent' },
+            'Parler': { je: 'parle', tu: 'parles', il: 'parle', nous: 'parlons', vous: 'parlez', ils: 'parlent' },
+            'Aimer': { je: 'aime', tu: 'aimes', il: 'aime', nous: 'aimons', vous: 'aimez', ils: 'aiment' },
+            'Jouer': { je: 'joue', tu: 'joues', il: 'joue', nous: 'jouons', vous: 'jouez', ils: 'jouent' },
+            'Tomber': { je: 'tombe', tu: 'tombes', il: 'tombe', nous: 'tombons', vous: 'tombez', ils: 'tombent' },
+            'Finir': { je: 'finis', tu: 'finis', il: 'finit', nous: 'finissons', vous: 'finissez', ils: 'finissent' },
+            'Choisir': { je: 'choisis', tu: 'choisis', il: 'choisit', nous: 'choisissons', vous: 'choisissez', ils: 'choisissent' },
+            'Être': { je: 'suis', tu: 'es', il: 'est', nous: 'sommes', vous: 'êtes', ils: 'sont' },
+            'Avoir': { je: "ai", tu: 'as', il: 'a', nous: 'avons', vous: 'avez', ils: 'ont' },
+            'Aller': { je: 'vais', tu: 'vas', il: 'va', nous: 'allons', vous: 'allez', ils: 'vont' },
+            'Faire': { je: 'fais', tu: 'fais', il: 'fait', nous: 'faisons', vous: 'faites', ils: 'font' },
+            'Prendre': { je: 'prends', tu: 'prends', il: 'prend', nous: 'prenons', vous: 'prenez', ils: 'prennent' },
+            'Venir': { je: 'viens', tu: 'viens', il: 'vient', nous: 'venons', vous: 'venez', ils: 'viennent' },
+        };
+
+        const subjects = ['je', 'tu', 'il', 'nous', 'vous', 'ils'];
+
+        // --- STATE ---
+        let players = [
+            { id: 1, name: 'Joueur 1', color: 'bg-red-500', position: 0 },
+            { id: 2, name: 'Joueur 2', color: 'bg-blue-500', position: 0 },
+        ];
+        let currentPlayerIdx = 0;
+        let selectedGroup = 'all';
+        let gameState = 'idle'; // idle, moving, challenge, special
+        let currentChallenge = null;
+
+        // --- DOM ELEMENTS ---
+        const boardEl = document.getElementById('board');
+        const playerStatsEl = document.getElementById('player-stats');
+        const groupBtnsEl = document.getElementById('group-buttons');
+        const diceBtn = document.getElementById('dice-btn');
+        const turnIndicator = document.getElementById('turn-indicator');
+        const modalContainer = document.getElementById('modal-container');
+        const specialMsgEl = document.getElementById('special-msg');
+        const specialMsgContent = document.getElementById('special-msg-content');
+
+        // --- CORE FUNCTIONS ---
+
+        function init() {
+            renderGroupButtons();
+            resetGame();
+            diceBtn.addEventListener('click', rollDice);
+        }
+
+        function renderGroupButtons() {
+            const groups = [
+                { id: 'all', label: 'MIXTE (Tous)' },
+                { id: 'group1', label: '1er GROUPE' },
+                { id: 'group2', label: '2e GROUPE' },
+                { id: 'group3', label: '3e GROUPE' }
+            ];
+            groupBtnsEl.innerHTML = groups.map(g => `
+                <button onclick="changeGroup('${g.id}')" class="px-4 py-2 rounded-xl font-bold text-xs transition-all border-2 ${selectedGroup === g.id ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'}">
+                    ${g.label}
+                </button>
+            `).join('');
+        }
+
+        window.changeGroup = (id) => {
+            selectedGroup = id;
+            renderGroupButtons();
+            resetGame();
+        };
+
+        function resetGame() {
+            players.forEach(p => p.position = 0);
+            currentPlayerIdx = 0;
+            gameState = 'idle';
+            currentChallenge = null;
+            modalContainer.classList.add('hidden');
+            specialMsgEl.classList.add('hidden');
+            renderUI();
+        }
+
+        function renderUI() {
+            // Render Stats
+            playerStatsEl.innerHTML = players.map((p, idx) => `
+                <div class="p-3 rounded-2xl border-2 transition-all flex items-center gap-3 ${currentPlayerIdx === idx ? 'border-indigo-500 bg-indigo-50' : 'border-transparent bg-slate-50 opacity-60'}">
+                    <div class="w-8 h-8 rounded-full ${p.color} border-2 border-white shadow-sm flex-shrink-0"></div>
+                    <div class="text-left overflow-hidden">
+                        <p class="text-xs font-black truncate leading-none mb-1">${p.name}</p>
+                        <p class="text-[10px] text-indigo-600 font-mono font-bold">CASE ${p.position}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Render Board
+            const specialTiles = mapsConfig[selectedGroup];
+            let boardHtml = '';
+            for (let i = 0; i <= BOARD_SIZE; i++) {
+                const spec = specialTiles[i];
+                const isStart = i === 0;
+                const isEnd = i === BOARD_SIZE;
+                const playersHere = players.filter(p => p.position === i);
+
+                boardHtml += `
+                    <div class="relative flex flex-col items-center justify-center w-16 h-16 m-1 rounded-xl shadow-sm border-2 transition-all 
+                        ${isStart ? 'bg-emerald-50 border-emerald-400' : isEnd ? 'bg-amber-50 border-amber-500 ring-4 ring-amber-100' : spec ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-100'}">
+                        <span class="absolute text-[10px] text-gray-400 top-1 right-1 font-bold">${i}</span>
+                        ${isStart ? '<span class="text-[10px] font-black text-emerald-600">DÉPART</span>' : ''}
+                        ${isEnd ? '<i data-lucide="trophy" class="w-4 h-4 text-amber-500 mb-1"></i><span class="text-[10px] font-black text-amber-600 uppercase">Arrivée</span>' : ''}
+                        ${spec ? `
+                            <div class="flex flex-col items-center text-purple-600">
+                                <i data-lucide="${spec.v > 0 ? 'arrow-right' : 'arrow-left'}" class="w-5 h-5"></i>
+                                <span class="text-[10px] font-black">${Math.abs(spec.v)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="flex -space-x-2 mt-auto pb-1">
+                            ${playersHere.map(p => `
+                                <div class="w-6 h-6 rounded-full shadow-md border-2 border-white transform transition-all scale-110 ${p.color} ${currentPlayerIdx === p.id - 1 && gameState === 'idle' ? 'bounce' : ''}"></div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            boardEl.innerHTML = boardHtml;
+            lucide.createIcons();
+
+            // Dice UI
+            turnIndicator.textContent = `TOUR DE ${players[currentPlayerIdx].name}`;
+            diceBtn.disabled = gameState !== 'idle';
+            if (gameState === 'idle') {
+                diceBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                diceBtn.innerHTML = '<i data-lucide="dice-5" class="w-12 h-12"></i>';
+            } else {
+                diceBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            lucide.createIcons();
+        }
+
+        function rollDice() {
+            if (gameState !== 'idle') return;
+            gameState = 'rolling';
+            diceBtn.innerHTML = '<i data-lucide="rotate-ccw" class="w-10 h-10 animate-spin"></i>';
+            lucide.createIcons();
+
+            setTimeout(() => {
+                const rolled = Math.floor(Math.random() * 6) + 1;
+                diceBtn.innerHTML = `<span class="text-5xl">${rolled}</span>`;
+                movePlayer(rolled);
+            }, 600);
+        }
+
+        function movePlayer(steps) {
+            gameState = 'moving';
+            const player = players[currentPlayerIdx];
+            let nextPos = Math.min(player.position + steps, BOARD_SIZE);
+            
+            player.position = nextPos;
+            renderUI();
+
+            setTimeout(() => checkTile(nextPos), 800);
+        }
+
+        function checkTile(pos) {
+            const specialTiles = mapsConfig[selectedGroup];
+            const spec = specialTiles[pos];
+
+            if (spec) {
+                const msg = spec.v > 0 ? `Case Bonus ! Avance de ${spec.v}` : `Case Piège ! Recule de ${Math.abs(spec.v)}`;
+                showSpecialMsg(msg);
+                gameState = 'special';
+                
+                setTimeout(() => {
+                    players[currentPlayerIdx].position = Math.max(0, players[currentPlayerIdx].position + spec.v);
+                    gameState = 'idle';
+                    hideSpecialMsg();
+                    currentPlayerIdx = (currentPlayerIdx + 1) % players.length;
+                    renderUI();
+                }, 2000);
+            } else if (pos === 0) {
+                gameState = 'idle';
+                currentPlayerIdx = (currentPlayerIdx + 1) % players.length;
+                renderUI();
+            } else {
+                showChallenge(pos === BOARD_SIZE);
+            }
+        }
+
+        function showChallenge(isFinishLine) {
+            gameState = 'challenge';
+            const list = selectedGroup === 'all' 
+                ? [...verbsData.group1, ...verbsData.group2, ...verbsData.group3]
+                : verbsData[selectedGroup];
+            
+            const availableVerbs = list.filter(v => conjugationTable[v]);
+            const verb = availableVerbs[Math.floor(Math.random() * availableVerbs.length)];
+            const subject = subjects[Math.floor(Math.random() * subjects.length)];
+
+            currentChallenge = {
+                verb, subject, isFinishLine,
+                answer: conjugationTable[verb][subject]
+            };
+
+            modalContainer.innerHTML = `
+                <div class="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-8 text-center animate-in zoom-in duration-300">
+                    <div class="inline-block px-4 py-1 rounded-full text-[10px] font-black mb-4 ${isFinishLine ? 'bg-amber-500 text-white animate-pulse' : 'bg-indigo-100 text-indigo-600'}">
+                        ${isFinishLine ? '🏆 DÉFI ULTIME DE LA VICTOIRE' : '📝 DÉFI CONJUGAISON'}
+                    </div>
+                    <p class="text-slate-400 text-sm mb-1">Comment conjugue-t-on :</p>
+                    <h2 class="text-4xl font-black text-slate-800 mb-8 uppercase tracking-tight italic">${verb}</h2>
+                    <div class="bg-slate-50 p-6 rounded-2xl mb-8 flex flex-col items-center">
+                        <div class="flex items-center gap-4">
+                            <span class="text-3xl font-black text-slate-400 capitalize">${subject}</span>
+                            <div class="h-10 border-r-2 border-slate-200 mx-2"></div>
+                            <span id="revealed-answer" class="text-3xl font-black min-w-[120px] text-slate-200">.......</span>
+                        </div>
+                    </div>
+                    <div id="challenge-btns">
+                        <button onclick="revealAnswer()" class="w-full bg-slate-800 text-white font-bold py-4 rounded-2xl hover:bg-slate-900 transition-all shadow-lg">
+                            RÉVÉLER LA RÉPONSE
+                        </button>
+                    </div>
+                </div>
+            `;
+            modalContainer.classList.remove('hidden');
+        }
+
+        window.revealAnswer = () => {
+            document.getElementById('revealed-answer').textContent = currentChallenge.answer;
+            document.getElementById('revealed-answer').classList.remove('text-slate-200');
+            document.getElementById('revealed-answer').classList.add('text-indigo-600');
+            document.getElementById('challenge-btns').innerHTML = `
+                <div class="flex gap-3">
+                    <button onclick="resolveChallenge(false)" class="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl flex flex-col items-center border-2 border-red-100 hover:bg-red-100 transition-all">
+                        <i data-lucide="x" class="w-5 h-5"></i> <span class="text-[10px]">C'est faux</span>
+                    </button>
+                    <button onclick="resolveChallenge(true)" class="flex-1 bg-emerald-50 text-emerald-600 font-bold py-4 rounded-2xl flex flex-col items-center border-2 border-emerald-100 hover:bg-emerald-100 transition-all">
+                        <i data-lucide="check" class="w-5 h-5"></i> <span class="text-[10px]">C'est juste !</span>
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+        };
+
+        window.resolveChallenge = (success) => {
+            if (success) {
+                if (currentChallenge.isFinishLine) {
+                    showWinner();
+                } else {
+                    nextTurn();
+                }
+            } else {
+                if (currentChallenge.isFinishLine) {
+                    modalContainer.classList.add('hidden');
+                    showSpecialMsg("Échec à l'arrivée ! Retour au DÉPART !");
+                    setTimeout(() => {
+                        players[currentPlayerIdx].position = 0;
+                        hideSpecialMsg();
+                        nextTurn();
+                    }, 2500);
+                } else {
+                    nextTurn();
+                }
+            }
+        };
+
+        function nextTurn() {
+            modalContainer.classList.add('hidden');
+            gameState = 'idle';
+            currentPlayerIdx = (currentPlayerIdx + 1) % players.length;
+            renderUI();
+        }
+
+        function showWinner() {
+            const winner = players[currentPlayerIdx];
+            modalContainer.innerHTML = `
+                <div class="bg-white rounded-[3rem] p-12 text-center max-w-md">
+                    <div class="text-6xl mb-6">🏆</div>
+                    <h2 class="text-5xl font-black text-slate-900 mb-2">GAGNÉ !</h2>
+                    <p class="text-xl text-slate-500 mb-8">
+                        <span class="font-black ${winner.color.replace('bg-', 'text-')}">${winner.name}</span> a triomphé !
+                    </p>
+                    <button onclick="resetGame()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-indigo-700 transition-all shadow-xl">
+                        REJOUER
+                    </button>
+                </div>
+            `;
+        }
+
+        function showSpecialMsg(text) {
+            specialMsgContent.textContent = text;
+            specialMsgEl.classList.remove('hidden');
+        }
+
+        function hideSpecialMsg() {
+            specialMsgEl.classList.add('hidden');
+        }
+
+        init();
+    </script>
+</body>
+</html>
