@@ -1,393 +1,516 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Le Jeu de la Moustache</title>
+    <title>Le Jeu de la Moustache - Grammaire Expert</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .bounce { animation: bounce 1s infinite; }
-        @keyframes bounce {
-            0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
-            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: radial-gradient(circle at center, #f8fafc, #e2e8f0);
+            overflow-x: hidden;
+        }
+        
+        /* Pawn Styling */
+        .pawn {
+            position: absolute;
+            transition: top 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 50;
+            width: 40px;
+            height: 55px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            filter: drop-shadow(0 10px 8px rgba(0,0,0,0.2));
+        }
+        .pawn-head {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: inherit;
+            border: 3px solid white;
+            z-index: 2;
+            position: relative;
+            box-shadow: inset -3px -3px 6px rgba(0,0,0,0.2);
+        }
+        .pawn-body {
+            width: 32px;
+            height: 35px;
+            background: inherit;
+            border: 3px solid white;
+            border-top: none;
+            margin-top: -8px;
+            border-radius: 40% 40% 20% 20%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 900;
+            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Hopping effect for pawn movement */
+        .hop { animation: hop 0.4s ease-out; }
+        @keyframes hop {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-30px); }
+        }
+
+        .idle-bounce { animation: idleBounce 1.2s infinite ease-in-out; }
+        @keyframes idleBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Tile Glows */
+        .tile-glow-green { background-color: #ecfdf5 !important; border-color: #10b981 !important; box-shadow: 0 0 15px #10b98144; z-index: 10; }
+        .tile-glow-red { background-color: #fff1f2 !important; border-color: #f43f5e !important; box-shadow: 0 0 15px #f43f5e44; z-index: 10; }
+        
+        #board-container { position: relative; }
+        #board::-webkit-scrollbar { width: 6px; }
+        #board::-webkit-scrollbar-track { background: transparent; }
+        #board::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        .shortcut-icon {
+            animation: pulse-icon 2s infinite;
+        }
+        @keyframes pulse-icon {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 p-4">
+<body class="text-slate-800 p-4 min-h-screen">
 
-    <div id="app" class="min-h-screen flex flex-col items-center">
-        <!-- Moustache Header -->
+    <div id="app" class="max-w-7xl mx-auto flex flex-col items-center">
+        <!-- Header -->
         <div class="text-center mb-6">
-            <svg viewBox="0 0 200 60" class="w-32 h-10 mx-auto mb-1 fill-slate-800">
-                <path d="M100,20 C120,20 135,10 150,10 C175,10 195,30 195,40 C195,50 175,55 160,50 C145,45 140,35 130,35 C120,35 115,45 100,45 C85,45 80,35 70,35 C60,35 55,45 40,50 C25,55 5,50 5,40 C5,30 25,10 50,10 C65,10 80,20 100,20 Z" />
-            </svg>
-            <h1 class="text-xl font-black text-slate-900 uppercase tracking-widest">Le Jeu de la Moustache</h1>
+            <div class="flex items-center justify-center gap-4 mb-2">
+                <div class="h-1 w-20 bg-slate-300 rounded-full"></div>
+                <svg viewBox="0 0 200 60" class="w-24 h-8 fill-slate-800">
+                    <path d="M100,20 C120,20 135,10 150,10 C175,10 195,30 195,40 C195,50 175,55 160,50 C145,45 140,35 130,35 C120,35 115,45 100,45 C85,45 80,35 70,35 C60,35 55,45 40,50 C25,55 5,50 5,40 C5,30 25,10 50,10 C65,10 80,20 100,20 Z" />
+                </svg>
+                <div class="h-1 w-20 bg-slate-300 rounded-full"></div>
+            </div>
+            <h1 class="text-2xl font-black text-slate-900 uppercase tracking-[0.2em]">Le Jeu de la Moustache</h1>
+            <p class="text-[10px] font-bold text-slate-500 uppercase italic">Conjugaison & Animation</p>
         </div>
 
-        <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <!-- Left Panel -->
+        <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Sidebar Left -->
             <div class="lg:col-span-3 space-y-4">
-                <div class="bg-white p-5 rounded-3xl shadow-lg border border-slate-100">
-                    <p class="text-[10px] font-black text-slate-400 mb-3 uppercase tracking-tighter text-center">Choix du parcours</p>
-                    <div id="group-buttons" class="grid grid-cols-1 gap-2 mb-6">
-                        <!-- Group buttons injected here -->
-                    </div>
-                    <div id="player-stats" class="space-y-2">
-                        <!-- Player stats injected here -->
-                    </div>
+                <div class="bg-white/80 backdrop-blur-sm p-5 rounded-[2rem] shadow-xl border border-white">
+                    <p class="text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest text-center">Configuration</p>
+                    <div id="group-buttons" class="grid grid-cols-1 gap-2 mb-4"></div>
+                    <div class="h-px bg-slate-100 my-4"></div>
+                    <div id="tense-buttons" class="grid grid-cols-2 gap-2 mb-6"></div>
+                    
+                    <p class="text-[10px] font-black text-slate-400 mb-3 uppercase tracking-widest text-center">Scoreboard</p>
+                    <div id="player-stats" class="space-y-2"></div>
+                </div>
+
+                <div class="bg-slate-900 p-5 rounded-[2rem] text-white shadow-xl">
+                    <h3 class="text-xs font-black mb-2 uppercase flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4 text-indigo-400"></i> Mémo
+                    </h3>
+                    <ul class="text-[9px] space-y-2 opacity-80 leading-relaxed">
+                        <li>• Échouer sur la <b>dernière case</b> renvoie au départ !</li>
+                        <li>• Les chemins <b>verts</b> montent, les <b>rouges</b> descendent.</li>
+                    </ul>
                 </div>
             </div>
 
-            <!-- Central Board -->
-            <div class="lg:col-span-6 bg-white p-4 rounded-3xl shadow-xl border border-slate-100">
-                <div id="board" class="flex flex-wrap justify-center content-start gap-1 h-full max-h-[650px] overflow-y-auto pb-4">
-                    <!-- Tiles injected here -->
+            <!-- Central Board Area -->
+            <div class="lg:col-span-6 bg-slate-200/50 p-2 rounded-[2.5rem] shadow-inner border border-slate-300/50 relative">
+                <div id="board-container" class="relative">
+                    <div id="board" class="grid grid-cols-6 gap-2 p-2 max-h-[700px] overflow-y-auto"></div>
+                    <div id="pieces-layer" class="absolute inset-0 pointer-events-none"></div>
                 </div>
             </div>
 
-            <!-- Right Panel: Dice -->
+            <!-- Right Panel: Controls -->
             <div class="lg:col-span-3 flex flex-col gap-4">
-                <div class="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 flex flex-col items-center justify-center flex-1">
-                    <p class="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">Zone de lancer</p>
-                    <button id="dice-btn" class="w-32 h-32 rounded-[2rem] flex flex-col items-center justify-center text-6xl font-black transition-all shadow-2xl border-4 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white border-indigo-300 hover:scale-105 active:scale-95">
-                        <i data-lucide="dice-5" class="w-12 h-12"></i>
-                    </button>
-                    <div class="mt-8 text-center">
-                        <p id="turn-indicator" class="text-sm font-black uppercase tracking-widest text-indigo-600 animate-pulse">
-                            TOUR DE JOUEUR 1
-                        </p>
+                <div class="bg-white p-8 rounded-[3rem] shadow-2xl border border-slate-100 flex flex-col items-center justify-center flex-1">
+                    <div id="dice-container" class="relative mb-8">
+                        <button id="dice-btn" class="w-32 h-32 rounded-[2.5rem] flex items-center justify-center text-5xl font-black transition-all shadow-2xl text-white hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="dice-5" class="w-14 h-14"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div id="turn-badge" class="px-4 py-1 rounded-full bg-slate-100 text-[10px] font-black text-slate-500 mb-2 uppercase tracking-tighter">
+                            C'est à vous
+                        </div>
+                        <p id="turn-indicator" class="text-xl font-black uppercase text-slate-900">JOUEUR 1</p>
                     </div>
                 </div>
-                <div class="bg-amber-100 p-4 rounded-2xl border-2 border-amber-200">
-                    <h3 class="text-[10px] font-black text-amber-700 mb-2 uppercase">Guide rapide</h3>
-                    <p class="text-[9px] text-amber-800 leading-tight">Changer d'option réinitialise le jeu et change les emplacements des flèches.</p>
+
+                <div class="bg-white/50 p-4 rounded-3xl border border-white text-center">
+                    <p class="text-[9px] font-bold text-slate-400 uppercase">Progression</p>
+                    <div class="w-full bg-slate-200 h-2 rounded-full mt-2 overflow-hidden">
+                        <div id="global-progress" class="bg-indigo-500 h-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Modals -->
-    <div id="modal-container" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <!-- Challenge/Winner Content injected here -->
-    </div>
+    <div id="modal-container" class="hidden fixed inset-0 bg-slate-900/95 backdrop-blur-xl z-[100] flex items-center justify-center p-4"></div>
 
-    <div id="special-msg" class="hidden fixed top-10 left-1/2 transform -translate-x-1/2 z-[60] animate-bounce">
-        <div id="special-msg-content" class="bg-indigo-600 text-white px-8 py-3 rounded-full font-black shadow-2xl border-4 border-white">
+    <div id="special-msg" class="hidden fixed top-10 left-1/2 transform -translate-x-1/2 z-[110] animate-bounce">
+        <div id="special-msg-content" class="bg-white text-slate-900 px-8 py-3 rounded-full font-black shadow-2xl border-4 border-indigo-600 uppercase text-xs">
             Message
         </div>
     </div>
 
     <script>
-        // --- DATA ---
-        const BOARD_SIZE = 28;
-        const mapsConfig = {
-            group1: { 5: { v: 3 }, 10: { v: -4 }, 15: { v: 2 }, 20: { v: -6 }, 25: { v: -10 } },
-            group2: { 4: { v: 5 }, 9: { v: -3 }, 14: { v: -5 }, 19: { v: 4 }, 24: { v: -12 } },
-            group3: { 6: { v: -4 }, 12: { v: 6 }, 18: { v: -8 }, 22: { v: -5 }, 26: { v: -15 } },
-            all: { 5: { v: 3 }, 8: { v: -2 }, 11: { v: 4 }, 16: { v: -3 }, 19: { v: -5 }, 22: { v: -8 } }
+        const BOARD_SIZE = 42;
+        const shortcuts = {
+            3: { to: 12, type: 'ladder' },
+            8: { to: 22, type: 'ladder' },
+            17: { to: 4, type: 'snake' },
+            20: { to: 32, type: 'ladder' },
+            26: { to: 10, type: 'snake' },
+            35: { to: 15, type: 'snake' },
+            38: { to: 41, type: 'ladder' },
+            40: { to: 24, type: 'snake' }
         };
 
         const verbsData = {
-            group1: ['Manger', 'Chanter', 'Parler', 'Aimer', 'Jouer', 'Tomber', 'Sauter', 'Cuisiner', 'Marcher', 'Regarder', 'Écouter', 'Donner', 'Chercher', 'Travailler'],
-            group2: ['Finir', 'Choisir', 'Grandir', 'Remplir', 'Rougir', 'Obéir', 'Réussir', 'Bâtir', 'Réfléchir', 'Punir'],
-            group3: ['Être', 'Avoir', 'Aller', 'Faire', 'Prendre', 'Venir', 'Dire', 'Pouvoir', 'Vouloir', 'Voir', 'Savoir', 'Partir'],
+            group1: ['Manger', 'Chanter', 'Parler', 'Aimer'],
+            group2: ['Finir', 'Choisir', 'Grandir'],
+            group3: ['Être', 'Avoir', 'Aller', 'Faire', 'Prendre', 'Venir', 'Dire'],
         };
 
         const conjugationTable = {
-            'Manger': { je: 'mange', tu: 'manges', il: 'mange', nous: 'mangeons', vous: 'mangez', ils: 'mangent' },
-            'Chanter': { je: 'chante', tu: 'chantes', il: 'chante', nous: 'chantons', vous: 'chantez', ils: 'chantent' },
-            'Parler': { je: 'parle', tu: 'parles', il: 'parle', nous: 'parlons', vous: 'parlez', ils: 'parlent' },
-            'Aimer': { je: 'aime', tu: 'aimes', il: 'aime', nous: 'aimons', vous: 'aimez', ils: 'aiment' },
-            'Jouer': { je: 'joue', tu: 'joues', il: 'joue', nous: 'jouons', vous: 'jouez', ils: 'jouent' },
-            'Tomber': { je: 'tombe', tu: 'tombes', il: 'tombe', nous: 'tombons', vous: 'tombez', ils: 'tombent' },
-            'Finir': { je: 'finis', tu: 'finis', il: 'finit', nous: 'finissons', vous: 'finissez', ils: 'finissent' },
-            'Choisir': { je: 'choisis', tu: 'choisis', il: 'choisit', nous: 'choisissons', vous: 'choisissez', ils: 'choisissent' },
-            'Être': { je: 'suis', tu: 'es', il: 'est', nous: 'sommes', vous: 'êtes', ils: 'sont' },
-            'Avoir': { je: "ai", tu: 'as', il: 'a', nous: 'avons', vous: 'avez', ils: 'ont' },
-            'Aller': { je: 'vais', tu: 'vas', il: 'va', nous: 'allons', vous: 'allez', ils: 'vont' },
-            'Faire': { je: 'fais', tu: 'fais', il: 'fait', nous: 'faisons', vous: 'faites', ils: 'font' },
-            'Prendre': { je: 'prends', tu: 'prends', il: 'prend', nous: 'prenons', vous: 'prenez', ils: 'prennent' },
-            'Venir': { je: 'viens', tu: 'viens', il: 'vient', nous: 'venons', vous: 'venez', ils: 'viennent' },
+            'Manger': {
+                present: { je: 'mange', tu: 'manges', il: 'mange', nous: 'mangeons', vous: 'mangez', ils: 'mangent' },
+                imparfait: { je: 'mangeais', tu: 'mangeais', il: 'mangeait', nous: 'mangions', vous: 'mangiez', ils: 'mangeaient' },
+                passe_compose: { je: 'ai mangé', tu: 'as mangé', il: 'a mangé', nous: 'avons mangé', vous: 'avez mangé', ils: 'ont mangé' },
+                futur: { je: 'mangerai', tu: 'mangeras', il: 'mangera', nous: 'mangerons', vous: 'mangerez', ils: 'mangeront' }
+            },
+            'Chanter': {
+                present: { je: 'chante', tu: 'chantes', il: 'chante', nous: 'chantons', vous: 'chantez', ils: 'chantent' },
+                imparfait: { je: 'chantais', tu: 'chantais', il: 'chantait', nous: 'chantions', vous: 'chantiez', ils: 'chantaient' },
+                passe_compose: { je: 'ai chanté', tu: 'as chanté', il: 'a chanté', nous: 'avons chanté', vous: 'avez chanté', ils: 'ont chanté' },
+                futur: { je: 'chanterai', tu: 'chanteras', il: 'chantera', nous: 'chanterons', vous: 'chanterez', ils: 'chanteront' }
+            },
+            'Finir': {
+                present: { je: 'finis', tu: 'finis', il: 'finit', nous: 'finissons', vous: 'finissez', ils: 'finissent' },
+                imparfait: { je: 'finissais', tu: 'finissais', il: 'finissait', nous: 'finissions', vous: 'finissiez', ils: 'finissaient' },
+                passe_compose: { je: 'ai fini', tu: 'as fini', il: 'a fini', nous: 'a fini', nous: 'avons fini', vous: 'avez fini', ils: 'ont fini' },
+                futur: { je: 'finirai', tu: 'finiras', il: 'finira', nous: 'finirons', vous: 'finirez', ils: 'finiront' }
+            },
+            'Être': {
+                present: { je: 'suis', tu: 'es', il: 'est', nous: 'sommes', vous: 'êtes', ils: 'sont' },
+                imparfait: { je: 'étais', tu: 'étais', il: 'était', nous: 'étions', vous: 'étiez', ils: 'étaient' },
+                passe_compose: { je: 'ai été', tu: 'as été', il: 'a été', nous: 'avons été', vous: 'avez été', ils: 'ont été' },
+                futur: { je: 'serai', tu: 'seras', il: 'sera', nous: 'serons', vous: 'serez', ils: 'seront' }
+            },
+            'Avoir': {
+                present: { je: 'ai', tu: 'as', il: 'a', nous: 'avons', vous: 'avez', ils: 'ont' },
+                imparfait: { je: 'avais', tu: 'avais', il: 'avait', nous: 'avions', vous: 'aviez', ils: 'avaient' },
+                passe_compose: { je: 'ai eu', tu: 'as eu', il: 'a eu', nous: 'avons eu', vous: 'avez eu', ils: 'ont eu' },
+                futur: { je: 'aurai', tu: 'auras', il: 'aura', nous: 'aurons', vous: 'aurez', ils: 'auront' }
+            },
+            'Aller': {
+                present: { je: 'vais', tu: 'vas', il: 'va', nous: 'allons', vous: 'allez', ils: 'vont' },
+                imparfait: { je: 'allais', tu: 'allais', il: 'allait', nous: 'allions', vous: 'alliez', ils: 'allaient' },
+                passe_compose: { je: 'suis allé', tu: 'es allé', il: 'est allé', nous: 'sommes allés', vous: 'êtes allés', ils: 'sont allés' },
+                futur: { je: 'irai', tu: 'iras', il: 'ira', nous: 'irons', vous: 'irez', ils: 'iront' }
+            },
+            'Faire': {
+                present: { je: 'fais', tu: 'fais', il: 'fait', nous: 'faisons', vous: 'faites', ils: 'font' },
+                imparfait: { je: 'faisais', tu: 'faisais', il: 'faisait', nous: 'faisions', vous: 'faisiez', ils: 'faisaient' },
+                passe_compose: { je: 'ai fait', tu: 'as fait', il: 'a fait', nous: 'avons fait', vous: 'avez fait', ils: 'ont fait' },
+                futur: { je: 'ferai', tu: 'feras', il: 'fera', nous: 'ferons', vous: 'ferez', ils: 'feront' }
+            }
         };
 
         const subjects = ['je', 'tu', 'il', 'nous', 'vous', 'ils'];
+        const tenses = [
+            { id: 'present', label: 'Présent' },
+            { id: 'imparfait', label: 'Imparfait' },
+            { id: 'passe_compose', label: 'Passé Composé' },
+            { id: 'futur', label: 'Futur' }
+        ];
 
-        // --- STATE ---
         let players = [
-            { id: 1, name: 'Joueur 1', color: 'bg-red-500', position: 0 },
-            { id: 2, name: 'Joueur 2', color: 'bg-blue-500', position: 0 },
+            { id: 1, name: 'Joueur 1', color: '#f43f5e', position: 0, prevPosition: 0 },
+            { id: 2, name: 'Joueur 2', color: '#6366f1', position: 0, prevPosition: 0 },
         ];
         let currentPlayerIdx = 0;
         let selectedGroup = 'all';
-        let gameState = 'idle'; // idle, moving, challenge, special
+        let selectedTense = 'present';
+        let gameState = 'idle'; 
         let currentChallenge = null;
 
-        // --- DOM ELEMENTS ---
         const boardEl = document.getElementById('board');
+        const piecesLayer = document.getElementById('pieces-layer');
         const playerStatsEl = document.getElementById('player-stats');
         const groupBtnsEl = document.getElementById('group-buttons');
+        const tenseBtnsEl = document.getElementById('tense-buttons');
         const diceBtn = document.getElementById('dice-btn');
         const turnIndicator = document.getElementById('turn-indicator');
         const modalContainer = document.getElementById('modal-container');
         const specialMsgEl = document.getElementById('special-msg');
         const specialMsgContent = document.getElementById('special-msg-content');
 
-        // --- CORE FUNCTIONS ---
-
         function init() {
-            renderGroupButtons();
-            resetGame();
+            renderTiles();
+            renderControls();
+            renderStats();
+            updateDiceColor();
+            setTimeout(updatePiecesPosition, 200);
             diceBtn.addEventListener('click', rollDice);
+            window.addEventListener('resize', updatePiecesPosition);
         }
 
-        function renderGroupButtons() {
-            const groups = [
-                { id: 'all', label: 'MIXTE (Tous)' },
-                { id: 'group1', label: '1er GROUPE' },
-                { id: 'group2', label: '2e GROUPE' },
-                { id: 'group3', label: '3e GROUPE' }
-            ];
-            groupBtnsEl.innerHTML = groups.map(g => `
-                <button onclick="changeGroup('${g.id}')" class="px-4 py-2 rounded-xl font-bold text-xs transition-all border-2 ${selectedGroup === g.id ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-500 border-slate-100 hover:border-slate-300'}">
-                    ${g.label}
-                </button>
-            `).join('');
-        }
-
-        window.changeGroup = (id) => {
-            selectedGroup = id;
-            renderGroupButtons();
-            resetGame();
-        };
-
-        function resetGame() {
-            players.forEach(p => p.position = 0);
-            currentPlayerIdx = 0;
-            gameState = 'idle';
-            currentChallenge = null;
-            modalContainer.classList.add('hidden');
-            specialMsgEl.classList.add('hidden');
-            renderUI();
-        }
-
-        function renderUI() {
-            // Render Stats
-            playerStatsEl.innerHTML = players.map((p, idx) => `
-                <div class="p-3 rounded-2xl border-2 transition-all flex items-center gap-3 ${currentPlayerIdx === idx ? 'border-indigo-500 bg-indigo-50' : 'border-transparent bg-slate-50 opacity-60'}">
-                    <div class="w-8 h-8 rounded-full ${p.color} border-2 border-white shadow-sm flex-shrink-0"></div>
-                    <div class="text-left overflow-hidden">
-                        <p class="text-xs font-black truncate leading-none mb-1">${p.name}</p>
-                        <p class="text-[10px] text-indigo-600 font-mono font-bold">CASE ${p.position}</p>
-                    </div>
-                </div>
-            `).join('');
-
-            // Render Board
-            const specialTiles = mapsConfig[selectedGroup];
+        function renderTiles() {
             let boardHtml = '';
             for (let i = 0; i <= BOARD_SIZE; i++) {
-                const spec = specialTiles[i];
-                const isStart = i === 0;
-                const isEnd = i === BOARD_SIZE;
-                const playersHere = players.filter(p => p.position === i);
-
-                boardHtml += `
-                    <div class="relative flex flex-col items-center justify-center w-16 h-16 m-1 rounded-xl shadow-sm border-2 transition-all 
-                        ${isStart ? 'bg-emerald-50 border-emerald-400' : isEnd ? 'bg-amber-50 border-amber-500 ring-4 ring-amber-100' : spec ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-100'}">
-                        <span class="absolute text-[10px] text-gray-400 top-1 right-1 font-bold">${i}</span>
-                        ${isStart ? '<span class="text-[10px] font-black text-emerald-600">DÉPART</span>' : ''}
-                        ${isEnd ? '<i data-lucide="trophy" class="w-4 h-4 text-amber-500 mb-1"></i><span class="text-[10px] font-black text-amber-600 uppercase">Arrivée</span>' : ''}
-                        ${spec ? `
-                            <div class="flex flex-col items-center text-purple-600">
-                                <i data-lucide="${spec.v > 0 ? 'arrow-right' : 'arrow-left'}" class="w-5 h-5"></i>
-                                <span class="text-[10px] font-black">${Math.abs(spec.v)}</span>
-                            </div>
-                        ` : ''}
-                        <div class="flex -space-x-2 mt-auto pb-1">
-                            ${playersHere.map(p => `
-                                <div class="w-6 h-6 rounded-full shadow-md border-2 border-white transform transition-all scale-110 ${p.color} ${currentPlayerIdx === p.id - 1 && gameState === 'idle' ? 'bounce' : ''}"></div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
+                const shortcut = shortcuts[i];
+                let tileClass = 'bg-white border-slate-100 transition-all duration-300';
+                let icon = '';
+                if (i === 0) tileClass += ' bg-emerald-50 border-emerald-200';
+                else if (i === BOARD_SIZE) tileClass += ' bg-amber-100 border-amber-400 border-2 shadow-[inset_0_0_10px_rgba(251,191,36,0.3)]';
+                else if (shortcut) {
+                    const isLadder = shortcut.type === 'ladder';
+                    tileClass += isLadder ? ' border-emerald-200' : ' border-rose-200';
+                    icon = isLadder 
+                        ? `<div class="shortcut-icon bg-emerald-500 rounded-full p-2 shadow-lg"><i data-lucide="chevrons-right" class="w-6 h-6 text-white"></i></div>` 
+                        : `<div class="shortcut-icon bg-rose-500 rounded-full p-2 shadow-lg"><i data-lucide="chevrons-left" class="w-6 h-6 text-white"></i></div>`;
+                }
+                boardHtml += `<div id="tile-${i}" class="relative flex flex-col items-center justify-center h-20 rounded-2xl shadow-sm border ${tileClass}">
+                    <span class="absolute text-[8px] text-slate-400 top-1 right-2 font-black">${i}</span>
+                    ${icon}
+                    ${i === BOARD_SIZE ? '<i data-lucide="trophy" class="w-6 h-6 text-amber-600"></i>' : ''}
+                </div>`;
             }
             boardEl.innerHTML = boardHtml;
             lucide.createIcons();
+        }
 
-            // Dice UI
-            turnIndicator.textContent = `TOUR DE ${players[currentPlayerIdx].name}`;
-            diceBtn.disabled = gameState !== 'idle';
-            if (gameState === 'idle') {
-                diceBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                diceBtn.innerHTML = '<i data-lucide="dice-5" class="w-12 h-12"></i>';
-            } else {
-                diceBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            }
-            lucide.createIcons();
+        function renderControls() {
+            const groups = [{id:'all',label:'Mixte'},{id:'group1',label:'1er G.'},{id:'group2',label:'2e G.'},{id:'group3',label:'3e G.'}];
+            groupBtnsEl.innerHTML = groups.map(g => `<button onclick="changeGroup('${g.id}')" class="w-full px-3 py-2 rounded-xl font-bold text-[9px] transition-all border-2 ${selectedGroup === g.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-100'}">${g.label}</button>`).join('');
+            tenseBtnsEl.innerHTML = tenses.map(t => `<button onclick="changeTense('${t.id}')" class="px-2 py-2 rounded-xl font-bold text-[8px] transition-all border-2 ${selectedTense === t.id ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-100'}">${t.label}</button>`).join('');
+        }
+
+        function renderStats() {
+            playerStatsEl.innerHTML = players.map((p, idx) => `
+                <div class="p-3 rounded-2xl border-2 flex items-center justify-between transition-all ${currentPlayerIdx === idx ? 'border-indigo-500 bg-white shadow-lg' : 'border-transparent bg-slate-50 opacity-60'}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-4 h-6 flex flex-col items-center" style="filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2))">
+                            <div class="w-3 h-3 rounded-full border border-white" style="background:${p.color}"></div>
+                            <div class="w-4 h-4 rounded-t-full border border-white -mt-1" style="background:${p.color}"></div>
+                        </div>
+                        <p class="text-[10px] font-black uppercase text-slate-600">${p.name}</p>
+                    </div>
+                    <p class="text-[10px] font-black text-indigo-600">CASE ${p.position}</p>
+                </div>`).join('');
+            turnIndicator.textContent = players[currentPlayerIdx].name;
+            document.getElementById('global-progress').style.width = `${(Math.max(...players.map(p => p.position)) / BOARD_SIZE) * 100}%`;
+        }
+
+        function updateDiceColor() {
+            const p = players[currentPlayerIdx];
+            diceBtn.style.backgroundColor = p.color;
+            diceBtn.style.boxShadow = `0 15px 40px -10px ${p.color}88`;
+        }
+
+        function updatePiecesPosition(pawnToAnimateId = null) {
+            let piecesHtml = '';
+            const playersByTile = {};
+            players.forEach(p => {
+                if (!playersByTile[p.position]) playersByTile[p.position] = [];
+                playersByTile[p.position].push(p);
+            });
+
+            players.forEach(p => {
+                const tile = document.getElementById(`tile-${p.position}`);
+                if (!tile) return;
+                const top = tile.offsetTop;
+                const left = tile.offsetLeft;
+                const sameTile = playersByTile[p.position];
+                const index = sameTile.indexOf(p);
+                const offset = (index - (sameTile.length - 1) / 2) * 20;
+                const isCurrent = (players[currentPlayerIdx].id === p.id && gameState === 'idle');
+                const isHopping = pawnToAnimateId === p.id;
+
+                piecesHtml += `
+                    <div id="pawn-${p.id}" class="pawn ${isCurrent ? 'idle-bounce' : ''} ${isHopping ? 'hop' : ''}" style="top:${top + 5}px; left:${left + 20 + offset}px; background:${p.color};">
+                        <div class="pawn-head"></div>
+                        <div class="pawn-body">${p.id}</div>
+                    </div>
+                `;
+            });
+            piecesLayer.innerHTML = piecesHtml;
+        }
+
+        window.changeGroup = (id) => { selectedGroup = id; renderControls(); resetGame(); };
+        window.changeTense = (id) => { selectedTense = id; renderControls(); resetGame(); };
+
+        function resetGame() {
+            players.forEach(p => { p.position = 0; p.prevPosition = 0; });
+            currentPlayerIdx = 0; gameState = 'idle'; modalContainer.classList.add('hidden');
+            renderStats(); updateDiceColor(); updatePiecesPosition();
         }
 
         function rollDice() {
             if (gameState !== 'idle') return;
-            gameState = 'rolling';
-            diceBtn.innerHTML = '<i data-lucide="rotate-ccw" class="w-10 h-10 animate-spin"></i>';
-            lucide.createIcons();
-
-            setTimeout(() => {
-                const rolled = Math.floor(Math.random() * 6) + 1;
-                diceBtn.innerHTML = `<span class="text-5xl">${rolled}</span>`;
-                movePlayer(rolled);
-            }, 600);
+            gameState = 'rolling'; diceBtn.disabled = true;
+            let count = 0;
+            const anim = setInterval(() => {
+                diceBtn.innerHTML = `<span class="text-3xl">${Math.floor(Math.random() * 6) + 1}</span>`;
+                if (++count > 12) {
+                    clearInterval(anim);
+                    const rolled = Math.floor(Math.random() * 6) + 1;
+                    diceBtn.innerHTML = `<span class="text-5xl">${rolled}</span>`;
+                    movePlayer(rolled);
+                }
+            }, 60);
         }
 
-        function movePlayer(steps) {
+        async function highlightPath(start, end, colorClass) {
+            const min = Math.min(start, end);
+            const max = Math.max(start, end);
+            for(let i = min; i <= max; i++) {
+                const tile = document.getElementById(`tile-${i}`);
+                if (tile) tile.classList.add(colorClass);
+            }
+        }
+
+        async function clearHighlights() {
+            for(let i = 0; i <= BOARD_SIZE; i++) {
+                const tile = document.getElementById(`tile-${i}`);
+                if (tile) {
+                    tile.classList.remove('tile-glow-green', 'tile-glow-red');
+                }
+            }
+        }
+
+        async function movePlayer(steps) {
             gameState = 'moving';
             const player = players[currentPlayerIdx];
-            let nextPos = Math.min(player.position + steps, BOARD_SIZE);
-            
-            player.position = nextPos;
-            renderUI();
-
-            setTimeout(() => checkTile(nextPos), 800);
+            player.prevPosition = player.position;
+            for(let i=1; i<=steps; i++) {
+                if(player.position >= BOARD_SIZE) break;
+                player.position++;
+                updatePiecesPosition(player.id);
+                await new Promise(r => setTimeout(r, 400));
+            }
+            renderStats();
+            setTimeout(() => checkTile(player.position), 400);
         }
 
         function checkTile(pos) {
-            const specialTiles = mapsConfig[selectedGroup];
-            const spec = specialTiles[pos];
-
-            if (spec) {
-                const msg = spec.v > 0 ? `Case Bonus ! Avance de ${spec.v}` : `Case Piège ! Recule de ${Math.abs(spec.v)}`;
-                showSpecialMsg(msg);
-                gameState = 'special';
-                
-                setTimeout(() => {
-                    players[currentPlayerIdx].position = Math.max(0, players[currentPlayerIdx].position + spec.v);
-                    gameState = 'idle';
-                    hideSpecialMsg();
-                    currentPlayerIdx = (currentPlayerIdx + 1) % players.length;
-                    renderUI();
-                }, 2000);
-            } else if (pos === 0) {
-                gameState = 'idle';
-                currentPlayerIdx = (currentPlayerIdx + 1) % players.length;
-                renderUI();
+            const sc = shortcuts[pos];
+            if (sc) {
+                showSpecialMsg(sc.type === 'ladder' ? "Super ! Une échelle !" : "Oh non ! Une moustache !");
+                setTimeout(() => showChallenge(pos === BOARD_SIZE, sc), 1000);
             } else {
                 showChallenge(pos === BOARD_SIZE);
             }
         }
 
-        function showChallenge(isFinishLine) {
+        function showChallenge(isFinishLine, shortcut = null) {
             gameState = 'challenge';
-            const list = selectedGroup === 'all' 
-                ? [...verbsData.group1, ...verbsData.group2, ...verbsData.group3]
-                : verbsData[selectedGroup];
-            
-            const availableVerbs = list.filter(v => conjugationTable[v]);
-            const verb = availableVerbs[Math.floor(Math.random() * availableVerbs.length)];
+            const list = selectedGroup === 'all' ? Object.values(verbsData).flat() : verbsData[selectedGroup];
+            const available = list.filter(v => conjugationTable[v]);
+            const verb = available[Math.floor(Math.random() * available.length)];
             const subject = subjects[Math.floor(Math.random() * subjects.length)];
-
-            currentChallenge = {
-                verb, subject, isFinishLine,
-                answer: conjugationTable[verb][subject]
-            };
-
+            currentChallenge = { verb, subject, tense: selectedTense, isFinishLine, shortcut, answer: conjugationTable[verb][selectedTense][subject] };
             modalContainer.innerHTML = `
-                <div class="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-8 text-center animate-in zoom-in duration-300">
-                    <div class="inline-block px-4 py-1 rounded-full text-[10px] font-black mb-4 ${isFinishLine ? 'bg-amber-500 text-white animate-pulse' : 'bg-indigo-100 text-indigo-600'}">
-                        ${isFinishLine ? '🏆 DÉFI ULTIME DE LA VICTOIRE' : '📝 DÉFI CONJUGAISON'}
+                <div class="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-10 text-center animate-in zoom-in duration-300">
+                    <div class="mb-6 flex flex-col items-center gap-3">
+                         <div class="bg-indigo-100 text-indigo-600 px-4 py-1 rounded-full text-[10px] font-black uppercase">${shortcut ? (shortcut.type === 'ladder' ? 'DÉFI ÉCHELLE' : 'DÉFI MOUSTACHE') : 'DÉFI NORMAL'}</div>
+                         <div class="bg-slate-100 text-slate-600 px-4 py-1 rounded-full text-[9px] font-black uppercase">TEMPS : ${tenses.find(t=>t.id===selectedTense).label}</div>
                     </div>
-                    <p class="text-slate-400 text-sm mb-1">Comment conjugue-t-on :</p>
-                    <h2 class="text-4xl font-black text-slate-800 mb-8 uppercase tracking-tight italic">${verb}</h2>
-                    <div class="bg-slate-50 p-6 rounded-2xl mb-8 flex flex-col items-center">
-                        <div class="flex items-center gap-4">
-                            <span class="text-3xl font-black text-slate-400 capitalize">${subject}</span>
-                            <div class="h-10 border-r-2 border-slate-200 mx-2"></div>
-                            <span id="revealed-answer" class="text-3xl font-black min-w-[120px] text-slate-200">.......</span>
-                        </div>
+                    ${isFinishLine ? '<p class="text-amber-600 font-black text-xs uppercase mb-2">🏆 Case Finale : Gagne ou retourne au départ !</p>' : ''}
+                    <h2 class="text-5xl font-black text-slate-800 mb-8 italic">${verb}</h2>
+                    <div class="bg-slate-50 p-8 rounded-[2rem] mb-8 border border-slate-100 shadow-inner flex items-center justify-center gap-6">
+                        <span class="text-4xl font-black text-indigo-500 capitalize">${subject}</span>
+                        <div class="w-1.5 h-12 bg-slate-200 rounded-full"></div>
+                        <span id="revealed-answer" class="text-4xl font-black text-slate-200 tracking-widest">...</span>
                     </div>
-                    <div id="challenge-btns">
-                        <button onclick="revealAnswer()" class="w-full bg-slate-800 text-white font-bold py-4 rounded-2xl hover:bg-slate-900 transition-all shadow-lg">
-                            RÉVÉLER LA RÉPONSE
-                        </button>
-                    </div>
-                </div>
-            `;
+                    <div id="challenge-btns"><button onclick="revealAnswer()" class="w-full bg-slate-900 text-white font-black py-5 rounded-2xl text-xs uppercase tracking-widest">VÉRIFIER</button></div>
+                </div>`;
             modalContainer.classList.remove('hidden');
         }
 
         window.revealAnswer = () => {
-            document.getElementById('revealed-answer').textContent = currentChallenge.answer;
-            document.getElementById('revealed-answer').classList.remove('text-slate-200');
-            document.getElementById('revealed-answer').classList.add('text-indigo-600');
+            const ansEl = document.getElementById('revealed-answer');
+            ansEl.textContent = currentChallenge.answer;
+            ansEl.classList.replace('text-slate-200', 'text-indigo-600');
             document.getElementById('challenge-btns').innerHTML = `
-                <div class="flex gap-3">
-                    <button onclick="resolveChallenge(false)" class="flex-1 bg-red-50 text-red-600 font-bold py-4 rounded-2xl flex flex-col items-center border-2 border-red-100 hover:bg-red-100 transition-all">
-                        <i data-lucide="x" class="w-5 h-5"></i> <span class="text-[10px]">C'est faux</span>
-                    </button>
-                    <button onclick="resolveChallenge(true)" class="flex-1 bg-emerald-50 text-emerald-600 font-bold py-4 rounded-2xl flex flex-col items-center border-2 border-emerald-100 hover:bg-emerald-100 transition-all">
-                        <i data-lucide="check" class="w-5 h-5"></i> <span class="text-[10px]">C'est juste !</span>
-                    </button>
-                </div>
-            `;
-            lucide.createIcons();
+                <div class="flex gap-4">
+                    <button onclick="resolveChallenge(false)" class="flex-1 bg-rose-50 text-rose-600 font-black py-4 rounded-2xl border-2 border-rose-100 text-[10px]">FAUX</button>
+                    <button onclick="resolveChallenge(true)" class="flex-1 bg-emerald-50 text-emerald-600 font-black py-4 rounded-2xl border-2 border-emerald-100 text-[10px]">JUSTE</button>
+                </div>`;
         };
 
-        window.resolveChallenge = (success) => {
+        async function resolveChallenge(success) {
+            const player = players[currentPlayerIdx];
+            const sc = currentChallenge.shortcut;
+            modalContainer.classList.add('hidden');
+
             if (success) {
-                if (currentChallenge.isFinishLine) {
-                    showWinner();
-                } else {
-                    nextTurn();
+                if (sc && sc.type === 'ladder') {
+                    highlightPath(player.position, sc.to, 'tile-glow-green');
+                    await new Promise(r => setTimeout(r, 600));
+                    player.position = sc.to;
+                    updatePiecesPosition(player.id);
+                    await new Promise(r => setTimeout(r, 800));
+                    clearHighlights();
                 }
+                if (currentChallenge.isFinishLine) { showWinner(); return; }
+                nextTurn();
             } else {
+                let targetPos;
                 if (currentChallenge.isFinishLine) {
-                    modalContainer.classList.add('hidden');
-                    showSpecialMsg("Échec à l'arrivée ! Retour au DÉPART !");
-                    setTimeout(() => {
-                        players[currentPlayerIdx].position = 0;
-                        hideSpecialMsg();
-                        nextTurn();
-                    }, 2500);
+                    showSpecialMsg("FATAL ! RETOUR AU DÉBUT !");
+                    targetPos = 0;
                 } else {
-                    nextTurn();
+                    targetPos = (sc && sc.type === 'snake') ? sc.to : player.prevPosition;
+                    showSpecialMsg("Retour arrière !");
                 }
+                
+                highlightPath(player.position, targetPos, 'tile-glow-red');
+                await new Promise(r => setTimeout(r, 600));
+                player.position = targetPos;
+                updatePiecesPosition(player.id);
+                await new Promise(r => setTimeout(r, 800));
+                clearHighlights();
+                nextTurn();
             }
-        };
+        }
 
         function nextTurn() {
-            modalContainer.classList.add('hidden');
-            gameState = 'idle';
+            modalContainer.classList.add('hidden'); hideSpecialMsg();
+            gameState = 'idle'; diceBtn.disabled = false;
             currentPlayerIdx = (currentPlayerIdx + 1) % players.length;
-            renderUI();
+            renderStats(); updateDiceColor(); updatePiecesPosition();
         }
 
         function showWinner() {
-            const winner = players[currentPlayerIdx];
-            modalContainer.innerHTML = `
-                <div class="bg-white rounded-[3rem] p-12 text-center max-w-md">
-                    <div class="text-6xl mb-6">🏆</div>
-                    <h2 class="text-5xl font-black text-slate-900 mb-2">GAGNÉ !</h2>
-                    <p class="text-xl text-slate-500 mb-8">
-                        <span class="font-black ${winner.color.replace('bg-', 'text-')}">${winner.name}</span> a triomphé !
-                    </p>
-                    <button onclick="resetGame()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-indigo-700 transition-all shadow-xl">
-                        REJOUER
-                    </button>
-                </div>
-            `;
+            modalContainer.innerHTML = `<div class="bg-white rounded-[4rem] p-16 text-center max-w-sm shadow-2xl animate-bounce border-8 border-amber-100">
+                <div class="text-8xl mb-6">🏆</div>
+                <h2 class="text-4xl font-black text-slate-900 mb-2">VICTOIRE !</h2>
+                <p class="text-xs text-slate-400 font-bold mb-8">Bravo, tu es un expert en grammaire !</p>
+                <button onclick="resetGame()" class="w-full bg-slate-900 text-white py-5 rounded-3xl font-black text-sm uppercase tracking-widest">REJOUER</button>
+            </div>`;
+            modalContainer.classList.remove('hidden');
         }
 
-        function showSpecialMsg(text) {
-            specialMsgContent.textContent = text;
-            specialMsgEl.classList.remove('hidden');
-        }
-
-        function hideSpecialMsg() {
-            specialMsgEl.classList.add('hidden');
-        }
-
+        function showSpecialMsg(text) { specialMsgContent.textContent = text; specialMsgEl.classList.remove('hidden'); }
+        function hideSpecialMsg() { specialMsgEl.classList.add('hidden'); }
         init();
     </script>
 </body>
